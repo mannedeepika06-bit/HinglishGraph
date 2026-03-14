@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🌍 Telugu + English + Hinglish Knowledge Graph</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #FF6B6B, #4ECDC4, #45B7D1);
+            color: white;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: auto; padding: 20px; }
+        h1 { text-align: center; font-size: 3em; margin: 20px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .upload-box { 
+            background: rgba(255,255,255,0.15); padding: 40px; border-radius: 25px; 
+            text-align: center; backdrop-filter: blur(10px); box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            margin: 30px 0;
+        }
+        .language-selector {
+            background: rgba(255,255,255,0.2); padding: 15px; border-radius: 15px; 
+            margin-bottom: 20px; font-size: 18px;
+        }
+        input[type="file"], select { 
+            padding: 15px 20px; font-size: 18px; border: none; border-radius: 15px; 
+            background: white; margin: 10px; width: 300px; 
+        }
+        button { 
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; border: none; 
+            padding: 18px 40px; border-radius: 30px; font-size: 20px; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(255,107,107,0.3); transition: all 0.3s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(255,107,107,0.4); }
+        #graph { width: 100%; height: 600px; border-radius: 20px; margin: 30px 0; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .results { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
+        .box { background: rgba(255,255,255,0.15); padding: 30px; border-radius: 20px; 
+            backdrop-filter: blur(10px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
+        .box h3 { margin-bottom: 20px; font-size: 1.5em; }
+        .keyword-tag { 
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; 
+            padding: 8px 16px; margin: 5px; border-radius: 20px; display: inline-block; 
+            font-weight: bold; 
+        }
+        .telugu-tag { background: linear-gradient(45deg, #FFD700, #FFA500) !important; }
+        .metric { font-size: 1.2em; margin: 10px 0; padding: 10px; 
+            background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .download-section { text-align: center; margin: 30px 0; }
+        .download-btn { background: #4CAF50 !important; margin: 0 10px; font-size: 18px; }
+        .share-btn { background: #2196F3 !important; margin: 0 10px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Telugu + English + Hinglish Knowledge Graph</h1>
+        <p style="text-align: center; font-size: 1.2em; margin-bottom: 30px;">
+            India's First Multi-Language Speech → Knowledge Graph 
+            <span style="font-size: 1.1em;">(తెలుగు | English | हिन्दी)</span>
+        </p>
+        
+        <div class="upload-box">
+            <form method="post" enctype="multipart/form-data">
+                <div class="language-selector">
+                    <label style="font-size: 20px; font-weight: bold;">🎤 Select Language:</label><br><br>
+                    <select name="language">
+                        <option value="auto">🔍 Auto Detect (Hinglish Best)</option>
+                        <option value="english">🇺🇸 English</option>
+                        <option value="telugu">🇮🇳 Telugu (తెలుగు)</option>
+                    </select>
+                </div>
+                <input type="file" name="audio" accept="audio/*" required>
+                <br><br>
+                <button type="submit">🚀 Build Knowledge Graph</button>
+                <p style="margin-top: 20px; font-size: 1.1em;">
+                    <strong>Test Telugu:</strong> "పైథాన్ AI మెషిన్ లెర్నింగ్ ఉపయోగకరం"<br>
+                    <strong>Test English:</strong> "Python AI machine learning is useful"
+                </p>
+            </form>
+        </div>
+        
+        {% if graph_data %}
+        <!-- Interactive Graph -->
+        <div id="graph"></div>
+        <script>
+            var edge_trace = {
+                x: {{ graph_data.edge_x|tojson }}, y: {{ graph_data.edge_y|tojson }},
+                mode: 'lines', line: {width: 5, color: '#FFD700'}, type: 'scatter', hoverinfo: 'none'
+            };
+            var node_trace = {
+                x: {{ graph_data.node_x|tojson }}, y: {{ graph_data.node_y|tojson }},
+                mode: 'markers+text', text: {{ graph_data.node_text|tojson }},
+                textposition: "middle center",
+                marker: {size: 50, color: '#FF6B6B', line: {color: 'white', width: 2}},
+                textfont: {size: 16, color: 'white', family: 'Arial Black'}
+            };
+            Plotly.newPlot('graph', [edge_trace, node_trace], {
+                paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+                showlegend: false, margin: {t: 0, b: 0, l: 0, r: 0}
+            });
+        </script>
+        
+        <!-- Download & Share -->
+        <div class="download-section">
+            <button class="download-btn" onclick="downloadGraph()">📸 Download Graph PNG</button>
+            <button class="share-btn" onclick="copyLink()">🔗 Copy Live Demo Link</button>
+        </div>
+        
+        <!-- Results -->
+        <div class="results">
+            <div class="box">
+                <h3>🎤 Detected Speech</h3>
+                <div class="metric">
+                    <strong>🌐 Language:</strong> {{ analysis.language }}
+                </div>
+                <p style="font-size: 1.2em; line-height: 1.6;">{{ speech_text }}</p>
+                <h3 style="margin-top: 25px;">🔑 Key Concepts Found</h3>
+                {% for kw in keywords %}
+                    <span class="keyword-tag {% if kw|length > 3 and kw[0] in ['ప','త','మ','ర','అ'] %}telugu-tag{% endif %}">
+                        {{ kw }}
+                    </span>
+                {% endfor %}
+            </div>
+            <div class="box">
+                <h3>🧠 Smart Graph Analysis</h3>
+                {% if analysis %}
+                    <div class="metric"><strong>🎯 Top Keyword:</strong> {{ analysis.top_word }}</div>
+                    <div class="metric"><strong>📊 Total Concepts:</strong> {{ analysis.total_words }}</div>
+                    <div class="metric"><strong>🔗 Total Connections:</strong> {{ analysis.connections }}</div>
+                    <div class="metric"><strong>⭐ Main Hub:</strong> {{ analysis.main_hub }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+    function downloadGraph() {
+        Plotly.downloadImage('graph', {
+            format: 'png', width: 1400, height: 800, 
+            filename: 'telugu_knowledge_graph'
+        });
+    }
+    function copyLink() {
+        navigator.clipboard.writeText(window.location.href);
+        alert('✅ Live Demo Link Copied!\nIndia\'s #1 Telugu/English Knowledge Graph');
+    }
+    </script>
+</body>
+</html>
