@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.9-slim
 
 # Install the C++ compiler needed for spaCy
 RUN apt-get update && apt-get install -y \
