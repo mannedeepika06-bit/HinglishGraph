@@ -1,3 +1,6 @@
+setuptools
+wheel
+pip>=23.0
 flask==2.3.3
 gunicorn==21.2.0
 speechrecognition==3.10.0
@@ -5,4 +8,4 @@ spacy==3.7.2
 networkx==3.2.1
 plotly==5.17.0
 pydub==0.25.1
-
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
