@@ -34,10 +34,13 @@
         button:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(255,107,107,0.4); }
         #graph { width: 100%; height: 600px; border-radius: 20px; margin: 30px 0; 
             box-shadow: 0 20px 40px rgba(0,0,0,0.3); background: rgba(255,255,255,0.1); }
-        .results { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; display: none; }
+        .results { display: none; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
         .box { background: rgba(255,255,255,0.15); padding: 30px; border-radius: 20px; 
             backdrop-filter: blur(10px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
         #loading { display: none; margin-top: 20px; font-size: 1.5em; font-weight: bold; }
+        .download-section { text-align: center; margin: 30px 0; display: none; }
+        .download-btn { background: #4CAF50 !important; margin: 0 10px; font-size: 18px; }
+        .share-btn { background: #2196F3 !important; margin: 0 10px; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -60,6 +63,11 @@
         </div>
 
         <div id="graph"></div>
+
+        <div class="download-section" id="actionButtons">
+            <button class="download-btn" onclick="downloadGraph()">📸 Download Graph PNG</button>
+            <button class="share-btn" onclick="copyLink()">🔗 Copy Live Demo Link</button>
+        </div>
 
         <div class="results" id="resultsArea">
             <div class="box">
@@ -96,12 +104,11 @@
             if (data.error) {
                 alert("Error: " + data.error);
             } else {
-                // Show Results
                 document.getElementById('resultsArea').style.display = 'grid';
+                document.getElementById('actionButtons').style.display = 'block';
                 document.getElementById('speechText').innerText = data.text;
-                document.getElementById('entityCount').innerText = "Concepts Found: " + data.entities.length;
+                document.getElementById('entityCount').innerText = "Concepts Found: " + (data.entities ? data.entities.length : 0);
 
-                // Render Graph
                 const graphData = JSON.parse(data.graph);
                 Plotly.newPlot('graph', graphData.data, {
                     ...graphData.layout,
@@ -111,10 +118,22 @@
                 });
             }
         } catch (e) {
-            alert("Connection error. Is the server running?");
+            alert("Connection error. Check Railway logs.");
         } finally {
             loading.style.display = 'none';
         }
+    }
+
+    function downloadGraph() {
+        Plotly.downloadImage('graph', {
+            format: 'png', width: 1200, height: 600, 
+            filename: 'knowledge_graph_export'
+        });
+    }
+
+    function copyLink() {
+        navigator.clipboard.writeText(window.location.href);
+        alert('✅ Link Copied!');
     }
     </script>
 </body>
