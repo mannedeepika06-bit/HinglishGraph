@@ -27,7 +27,6 @@ def index():
 
 @app.route('/process', methods=['POST'])
 def process_speech():
-    # 1. Check if file exists in request
     if 'audio' not in request.files:
         return jsonify({'error': 'No audio file found in request'})
     
@@ -36,22 +35,19 @@ def process_speech():
         return jsonify({'error': 'No file selected'})
 
     try:
-        # 2. SAVE the file properly to disk first
         temp_input_path = "temp_input.wav"
         audio_file.save(temp_input_path)
 
-        # 3. Convert/Format audio using pydub
         audio = AudioSegment.from_file(temp_input_path)
         audio = audio.set_frame_rate(16000).set_channels(1)
         
         temp_exported_path = 'processed_temp.wav'
         audio.export(temp_exported_path, format='wav')
 
-        # 4. Speech Recognition
         with sr.AudioFile(temp_exported_path) as source:
             audio_data = r.record(source)
             try:
-                # recognize_google supports Telugu if you add language='te-IN'
+                # To support Telugu nodes better, ensure language is detected or set
                 text = r.recognize_google(audio_data)
             except sr.UnknownValueError:
                 text = "Could not understand audio"
@@ -61,27 +57,72 @@ def process_speech():
         # 5. NLP & Knowledge Graph Logic
         doc = nlp(text)
         G = nx.DiGraph()
-        for ent in doc.ents:
-            G.add_node(ent.text, label=ent.label_)
+        
+        # Add nodes for tokens if entities aren't found
+        if not doc.ents:
+            for token in doc:
+                if not token.is_punct:
+                    G.add_node(token.text)
+        else:
+            for ent in doc.ents:
+                G.add_node(ent.text, label=ent.label_)
+
+        # Add edges based on dependency parsing
         for token in doc:
             for child in token.children:
-                G.add_edge(token.text, child.text)
+                if not token.is_punct and not child.is_punct:
+                    G.add_edge(token.text, child.text)
 
-        # 6. Create Plotly Graph
+        # 6. Create Plotly Graph (FIXED TO INCLUDE LINES)
         pos = nx.spring_layout(G)
+        
+        # Create Edge Trace (The Lines)
+        edge_x = []
+        edge_y = []
+        for edge in G.edges():
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=2, color='#888'),
+            hoverinfo='none',
+            mode='lines'
+        )
+
+        # Create Node Trace (The Dots)
         node_x = [pos[node][0] for node in G.nodes()]
         node_y = [pos[node][1] for node in G.nodes()]
         
         node_trace = go.Scatter(
-            x=node_x, y=node_y, mode='markers+text', 
+            x=node_x, y=node_y,
+            mode='markers+text',
             text=[node for node in G.nodes()],
-            marker=dict(size=20)
+            textposition="top center",
+            marker=dict(
+                size=25,
+                color='mediumpurple',
+                line=dict(width=2, color='white')
+            )
         )
         
-        fig = go.Figure(data=[node_trace])
+        # Combine both traces (Edges must come first so they stay behind nodes)
+        fig = go.Figure(data=[edge_trace, node_trace],
+             layout=go.Layout(
+                showlegend=False,
+                hovermode='closest',
+                margin=dict(b=0, l=0, r=0, t=0),
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+        )
+        
         graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-        # Clean up files
         os.remove(temp_input_path)
         os.remove(temp_exported_path)
 
