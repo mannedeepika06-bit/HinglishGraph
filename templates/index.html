@@ -41,6 +41,12 @@
         .download-section { text-align: center; margin: 30px 0; display: none; }
         .download-btn { background: #4CAF50 !important; margin: 0 10px; font-size: 18px; }
         .share-btn { background: #2196F3 !important; margin: 0 10px; font-size: 18px; }
+        
+        /* New Styles for Analytics Dashboard */
+        .stats-grid { display: flex; justify-content: space-around; margin-top: 15px; }
+        .stat-item { text-align: center; }
+        .stat-value { display: block; font-size: 1.8em; font-weight: bold; color: #fff; }
+        .stat-label { font-size: 0.9em; opacity: 0.8; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -72,11 +78,27 @@
         <div class="results" id="resultsArea">
             <div class="box">
                 <h3>🎤 Detected Speech</h3>
-                <p id="speechText" style="font-size: 1.2em;"></p>
+                <p id="speechText" style="font-size: 1.2em; margin-top: 10px; font-style: italic;"></p>
             </div>
             <div class="box">
-                <h3>🧠 Analysis</h3>
-                <p id="entityCount"></p>
+                <h3>📊 Graph Insights</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalConcepts">0</span>
+                        <span class="stat-label">Total Concepts</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalConnections">0</span>
+                        <span class="stat-label">Total Connections</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="mainHub">-</span>
+                        <span class="stat-label">Main Hub</span>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
+                    <p><strong>Top Keywords:</strong> <span id="topKeywords">-</span></p>
+                </div>
             </div>
         </div>
     </div>
@@ -106,8 +128,13 @@
             } else {
                 document.getElementById('resultsArea').style.display = 'grid';
                 document.getElementById('actionButtons').style.display = 'block';
-                document.getElementById('speechText').innerText = data.text;
-                document.getElementById('entityCount').innerText = "Concepts Found: " + (data.entities ? data.entities.length : 0);
+                
+                // Set text and new statistics
+                document.getElementById('speechText').innerText = '"' + data.text + '"';
+                document.getElementById('totalConcepts').innerText = data.total_concepts;
+                document.getElementById('totalConnections').innerText = data.total_connections;
+                document.getElementById('mainHub').innerText = data.main_hub;
+                document.getElementById('topKeywords').innerText = data.top_keywords.join(', ');
 
                 const graphData = JSON.parse(data.graph);
                 Plotly.newPlot('graph', graphData.data, {
@@ -118,6 +145,7 @@
                 });
             }
         } catch (e) {
+            console.error(e);
             alert("Connection error. Check Railway logs.");
         } finally {
             loading.style.display = 'none';
