@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import plotly.utils
 import json
 import os
+from collections import Counter
 
 app = Flask(__name__)
 
@@ -47,18 +48,16 @@ def process_speech():
         with sr.AudioFile(temp_exported_path) as source:
             audio_data = r.record(source)
             try:
-                # To support Telugu nodes better, ensure language is detected or set
                 text = r.recognize_google(audio_data)
             except sr.UnknownValueError:
                 text = "Could not understand audio"
             except sr.RequestError:
                 text = "Speech service down"
 
-        # 5. NLP & Knowledge Graph Logic
+        # NLP & Knowledge Graph Logic
         doc = nlp(text)
         G = nx.DiGraph()
         
-        # Add nodes for tokens if entities aren't found
         if not doc.ents:
             for token in doc:
                 if not token.is_punct:
@@ -67,16 +66,30 @@ def process_speech():
             for ent in doc.ents:
                 G.add_node(ent.text, label=ent.label_)
 
-        # Add edges based on dependency parsing
         for token in doc:
             for child in token.children:
                 if not token.is_punct and not child.is_punct:
                     G.add_edge(token.text, child.text)
 
-        # 6. Create Plotly Graph (FIXED TO INCLUDE LINES)
+        # --- NEW ANALYTICS LOGIC ---
+        total_concepts = G.number_of_nodes()
+        total_connections = G.number_of_edges()
+        
+        # Calculate Main Hub (Node with highest degree)
+        if total_concepts > 0:
+            degrees = dict(G.degree())
+            main_hub = max(degrees, key=degrees.get)
+        else:
+            main_hub = "None"
+
+        # Calculate Top Keywords
+        words = [token.text.lower() for token in doc if not token.is_stop and not token.is_punct]
+        top_keywords = [item[0] for item in Counter(words).most_common(5)]
+        # ---------------------------
+
+        # Create Plotly Graph
         pos = nx.spring_layout(G)
         
-        # Create Edge Trace (The Lines)
         edge_x = []
         edge_y = []
         for edge in G.edges():
@@ -92,7 +105,6 @@ def process_speech():
             mode='lines'
         )
 
-        # Create Node Trace (The Dots)
         node_x = [pos[node][0] for node in G.nodes()]
         node_y = [pos[node][1] for node in G.nodes()]
         
@@ -108,14 +120,24 @@ def process_speech():
             )
         )
         
-        # Combine both traces (Edges must come first so they stay behind nodes)
+        # UPDATED LAYOUT: Gridlines enabled
         fig = go.Figure(data=[edge_trace, node_trace],
              layout=go.Layout(
                 showlegend=False,
                 hovermode='closest',
                 margin=dict(b=0, l=0, r=0, t=0),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                xaxis=dict(
+                    showgrid=True, 
+                    gridcolor='rgba(255,255,255,0.1)', 
+                    zeroline=False, 
+                    showticklabels=False
+                ),
+                yaxis=dict(
+                    showgrid=True, 
+                    gridcolor='rgba(255,255,255,0.1)', 
+                    zeroline=False, 
+                    showticklabels=False
+                ),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
@@ -126,10 +148,15 @@ def process_speech():
         os.remove(temp_input_path)
         os.remove(temp_exported_path)
 
+        # UPDATED JSON RESPONSE: Including new metrics
         return jsonify({
             'text': text,
             'entities': [(ent.text, ent.label_) for ent in doc.ents],
-            'graph': graph_json
+            'graph': graph_json,
+            'total_concepts': total_concepts,
+            'total_connections': total_connections,
+            'main_hub': main_hub,
+            'top_keywords': top_keywords
         })
 
     except Exception as e:
